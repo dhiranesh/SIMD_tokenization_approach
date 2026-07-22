@@ -5,82 +5,12 @@
  * Falls back to scalar if AVX2 not available at compile time.
  */
 #include "simd_ops.h"
+#include "unicode_props.h"
 #include <cstring>
 
 #ifdef __AVX2__
 #include <immintrin.h>
 #endif
-
-static bool is_letter_cp(uint32_t cp) {
-    if (cp < 0x00C0) return false;
-    if (cp >= 0x00C0 && cp <= 0x024F) return true;
-    if (cp >= 0x0300 && cp <= 0x036F) return false;
-    if (cp >= 0x0370 && cp <= 0x03FF) return true;
-    if (cp >= 0x0400 && cp <= 0x04FF) return true;
-    if (cp >= 0x0500 && cp <= 0x052F) return true;
-    if (cp >= 0x0530 && cp <= 0x058F) return true;
-    if (cp >= 0x0590 && cp <= 0x05FF) return true;
-    if (cp >= 0x0600 && cp <= 0x06FF) return true;
-    if (cp >= 0x0700 && cp <= 0x074F) return true;
-    if (cp >= 0x0900 && cp <= 0x097F) return true;
-    if (cp >= 0x0980 && cp <= 0x09FF) return true;
-    if (cp >= 0x0A00 && cp <= 0x0A7F) return true;
-    if (cp >= 0x0A80 && cp <= 0x0AFF) return true;
-    if (cp >= 0x0B00 && cp <= 0x0B7F) return true;
-    if (cp >= 0x0B80 && cp <= 0x0BFF) return true;
-    if (cp >= 0x0C00 && cp <= 0x0C7F) return true;
-    if (cp >= 0x0C80 && cp <= 0x0CFF) return true;
-    if (cp >= 0x0D00 && cp <= 0x0D7F) return true;
-    if (cp >= 0x0D80 && cp <= 0x0DFF) return true;
-    if (cp >= 0x0E00 && cp <= 0x0E7F) return true;
-    if (cp >= 0x0E80 && cp <= 0x0EFF) return true;
-    if (cp >= 0x0F00 && cp <= 0x0FFF) return true;
-    if (cp >= 0x1000 && cp <= 0x109F) return true;
-    if (cp >= 0x10A0 && cp <= 0x10FF) return true;
-    if (cp >= 0x1100 && cp <= 0x11FF) return true;
-    if (cp >= 0x2E80 && cp <= 0x2EFF) return true;
-    if (cp >= 0x2F00 && cp <= 0x2FDF) return true;
-    if (cp >= 0x3040 && cp <= 0x309F) return true;
-    if (cp >= 0x30A0 && cp <= 0x30FF) return true;
-    if (cp >= 0x3100 && cp <= 0x312F) return true;
-    if (cp >= 0x3130 && cp <= 0x318F) return true;
-    if (cp >= 0x3400 && cp <= 0x4DBF) return true;
-    if (cp >= 0x4E00 && cp <= 0x9FFF) return true;
-    if (cp >= 0xA000 && cp <= 0xA4CF) return true;
-    if (cp >= 0xAC00 && cp <= 0xD7AF) return true;
-    if (cp >= 0xF900 && cp <= 0xFAFF) return true;
-    if (cp >= 0x20000 && cp <= 0x2A6DF) return true;
-    if (cp >= 0x2A700 && cp <= 0x2B73F) return true;
-    if (cp >= 0x2B740 && cp <= 0x2B81F) return true;
-    if (cp >= 0x2B820 && cp <= 0x2CEAF) return true;
-    if (cp >= 0x2F800 && cp <= 0x2FA1F) return true;
-    if (cp >= 0x30000 && cp <= 0x3134F) return true;
-    if (cp >= 0x31350 && cp <= 0x323AF) return true;
-    if (cp >= 0x2100 && cp <= 0x214F) return true;
-    if (cp >= 0x2C00 && cp <= 0x2C5F) return true;
-    if (cp >= 0xA640 && cp <= 0xA69F) return true;
-    if (cp >= 0x1D400 && cp <= 0x1D7FF) return true;
-    return false;
-}
-
-static bool is_digit_cp(uint32_t cp) {
-    if (cp >= 0x0660 && cp <= 0x0669) return true;
-    if (cp >= 0x06F0 && cp <= 0x06F9) return true;
-    if (cp >= 0x0966 && cp <= 0x096F) return true;
-    if (cp >= 0x09E6 && cp <= 0x09EF) return true;
-    if (cp >= 0x0BE6 && cp <= 0x0BEF) return true;
-    if (cp >= 0x0E50 && cp <= 0x0E59) return true;
-    if (cp >= 0x0ED0 && cp <= 0x0ED9) return true;
-    if (cp >= 0x0F20 && cp <= 0x0F29) return true;
-    if (cp >= 0x1040 && cp <= 0x1049) return true;
-    if (cp >= 0x17E0 && cp <= 0x17E9) return true;
-    if (cp >= 0x1810 && cp <= 0x1819) return true;
-    if (cp >= 0x1B50 && cp <= 0x1B59) return true;
-    if (cp >= 0xFF10 && cp <= 0xFF19) return true;
-    if (cp >= 0x2070 && cp <= 0x2079) return true;
-    if (cp >= 0x2080 && cp <= 0x2089) return true;
-    return false;
-}
 
 static void propagate_utf8_classes(uint8_t* out_classes, const uint8_t* data,
                                     uint32_t process_len) {
@@ -96,16 +26,16 @@ static void propagate_utf8_classes(uint8_t* out_classes, const uint8_t* data,
         } else if ((b & 0xE0) == 0xC0) {
             if (j + 1 >= process_len) { out_classes[j] = CLS_OTHER; ++j; continue; }
             uint32_t cp = (b & 0x1F) << 6 | (data[j+1] & 0x3F);
-            uint8_t cls = is_digit_cp(cp) ? CLS_DIGIT :
-                          is_letter_cp(cp) ? CLS_LETTER : CLS_OTHER;
+            uint8_t cls = is_unicode_number_cp(cp) ? CLS_DIGIT :
+                          is_unicode_letter_cp(cp) ? CLS_LETTER : CLS_OTHER;
             out_classes[j] = cls;
             out_classes[j+1] = cls;
             j += 2;
         } else if ((b & 0xF0) == 0xE0) {
             if (j + 2 >= process_len) { out_classes[j] = CLS_OTHER; ++j; continue; }
             uint32_t cp = (b & 0x0F) << 12 | (data[j+1] & 0x3F) << 6 | (data[j+2] & 0x3F);
-            uint8_t cls = is_digit_cp(cp) ? CLS_DIGIT :
-                          is_letter_cp(cp) ? CLS_LETTER : CLS_OTHER;
+            uint8_t cls = is_unicode_number_cp(cp) ? CLS_DIGIT :
+                          is_unicode_letter_cp(cp) ? CLS_LETTER : CLS_OTHER;
             for (uint32_t k = 0; k < 3 && j + k < process_len; ++k)
                 out_classes[j + k] = cls;
             j += 3;
@@ -113,7 +43,7 @@ static void propagate_utf8_classes(uint8_t* out_classes, const uint8_t* data,
             if (j + 3 >= process_len) { out_classes[j] = CLS_OTHER; ++j; continue; }
             uint32_t cp = (b & 0x07) << 18 | (data[j+1] & 0x3F) << 12 |
                           (data[j+2] & 0x3F) << 6 | (data[j+3] & 0x3F);
-            uint8_t cls = is_letter_cp(cp) ? CLS_LETTER : CLS_OTHER;
+            uint8_t cls = is_unicode_letter_cp(cp) ? CLS_LETTER : CLS_OTHER;
             for (uint32_t k = 0; k < 4 && j + k < process_len; ++k)
                 out_classes[j + k] = cls;
             j += 4;

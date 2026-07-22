@@ -167,9 +167,9 @@ std::string_view PreTokenizer::unmap_unicode_to_bytes(
         else if (b0 < 0xF0) chlen = 3;
         else chlen = 4;
 
-        uint8_t byte_val = reverse_lookup(mapped.data() + i, chlen);
+        int byte_val = reverse_lookup(mapped.data() + i, chlen);
 
-        if (byte_val != 0 || b0 == 0) {
+        if (byte_val >= 0) {
             buf[out_pos++] = (char)byte_val;
             i += chlen;
         } else {
