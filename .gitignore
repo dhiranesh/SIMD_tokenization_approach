@@ -1,0 +1,44 @@
+# Build artifacts
+*.exe
+*.o
+*.obj
+build/
+cmake-build-*/
+
+# Deprecated / historical source variants
+src/pre_tokenizer_fixed*.cpp
+src/pre_tokenizer_orig.cpp
+src/pre_tokenizer_minfix.cpp
+src/pre_tokenizer_final.cpp
+src/tokenizer_v2_fixed*.cpp
+src/tokenizer_v2_guarded.cpp
+
+# Debug & test scaffolding
+debug_*.cpp
+debug_trace*.cpp
+_debug_*
+_debug_*.py
+test_*.cpp
+_test_*
+bench_runner_dbg.cpp
+
+# Build logs & temp
+err*.txt
+out*.txt
+link_*.txt
+build_*.txt
+*.bin
+
+# IDE
+.vs/
+.vscode/
+.idea/
+*.user
+*.suo
+
+# OS
+Thumbs.db
+.DS_Store
+
+# Runtime cache
+hf_cache.json
